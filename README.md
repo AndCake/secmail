@@ -1,4 +1,6 @@
-secmail
+SecMail
 =======
 
-A distributed, secure alternative to emails
+A distributed, secure alternative to emails.
+
+
