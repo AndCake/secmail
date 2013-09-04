@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>RedLine</title>
+  <link rel="stylesheet" href="css/normalize.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<aside>
+  <h2>Mailboxes</h2>
+  <div class="actions">
+    <a href="#/new">New</a>
+    <a href="#/connect">Connect</a>
+  </div>
+  <ul id="mailboxes">
+  </ul>
+</aside>
+<section id="main">
+  <div class="index">
+    <h1>RedLine</h1>
+    <p>The distributed message relay.</p>
+  </div>
+</section>
+
+  <script type="text/x-template" data-template-id="setup">
+    <div class="setup">
+      <h2>Setup</h2>
+      <form method="post" action="data.php?setup">
+        <p>This is the first time you use SecMail. </p>
+        <input type="text" name="setup[uname]" placeholder="Please enter your username" required="required"/>
+        <select name="setup[server]" size="1" required="required">
+          <option value="" selected="selected" disabled="disabled">Select primary server</option>
+          <% _.each(servers, function(server, idx) {%><option value=<%=idx+1%>><%=server%></option><% }); %>
+          <option value="0">Other</option>
+        </select>
+
+        <div class="other-option hidden">
+          <input type="text" name="setup[user]" placeholder="Global username"/>
+          <input type="password" name="setup[pass]" placeholder="Global password"/>
+          <input type="text" name="setup[host]" placeholder="myserver.org/that/webdav/path"/>
+          <input type="text" name="setup[alias]" placeholder="Alias"/>
+        </div>
+        <button type="submit">Save</button>
+      </form>
+    </div>
+  </script>
+
+  <script type="text/x-template" data-template-id="mailboxes">
+    <% _.each(data, function(item) { %>
+      <li><a href="#/mb/<%=item.id%>" data-id="<%=item.id%>"><%=item.name%><% if (item.messages.length > 0) { %>
+        <span class="count"><%=item.messages.length%></span>
+        <% } %>
+      </a></li>
+    <% }); %>
+  </script>
+
+  <script type="text/x-template" data-template-id="add-contact">
+    <div class="mails">
+      <h2>Add Contact</h2>
+      <div class="my-contact">
+        <label>Your Profile Code:</label>
+        <img src="https://chart.googleapis.com/chart?chs=250x250&cht=qr&chl=<%=encodeURIComponent(data)%>"/>
+      </div>
+      <form method="post" action="data.php?import" class="import">
+        <div id="qrfile">
+          <label>Connect to:</label>
+          <canvas id="out-canvas" width="250" height="250"></canvas>
+          <canvas id="qr-canvas" width="800" height="600"></canvas>
+          <div id="imghelp">drag and drop the Contact Profile code here <br/>or select a file
+            <input type="file"/>
+          </div>
+        </div>
+        <div id="result"></div>
+        <button type="submit">Add</button>
+      </form>
+    </div>
+  </script>
+  <script type="text/x-template" data-template-id="renderContact">
+    <% if (line) { %>
+      <div class="new-contact">
+        <%=line%>
+        <a onclick="$(this.parentNode).remove();" class="remove"></a>
+        <textarea name="contact[]"><%=data%></textarea>
+      </div>
+    <% } else { %>
+      <div class='error'>No valid contact code.</div>      
+    <% } %>
+  </script>
+
+  <script type="text/x-template" data-template-id="mails">
+    <div class="mails">
+      <table border="0" id="mails">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Subject</th>
+              <th>From</th>
+              <th>To</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (messages.length <= 0) { %>
+              <tr><td colspan="4">No messages in this mailbox.</td></tr>
+            <% } %>
+            <% _.each(messages, function(msg, id) { %>
+              <tr data-msg-id="<%=id%>">
+                <td><%=msg.header.Date%></td>
+                <td><%=msg.header.Subject%></td>
+                <td><%=msg.header.From.name%></td>
+                <td><%=msg.header.To.name%></td>
+                <td></td>
+              </tr>
+            <% }); %>
+          </tbody>
+      </table>
+    </div>
+  </script>
+
+  <script type="text/x-template" data-template-id="new-msg">
+    <div class="newmsg">
+      <h2>Create new message</h2>
+      <form method="POST" action="data.php?send">
+        <div class="actions">
+          <button type="submit">Send</button>
+        </div>
+        <label>To: <input type="text" name="send[to]" id="send-to" /></label>
+        <label>Subject: <input type="text" name="send[subject]"/></label>
+        <label>
+          Message:
+          <textarea name="send[body]"></textarea>
+        </label>
+      </form>
+    </div>
+  </script>
+
+  <script src="js/libs/jquery-1.9.1.js"></script>
+  <script src="http://underscorejs.org/underscore-min.js"></script>
+  <script src="js/libs/jquery.fcbkcomplete.js"></script>
+  <script src="http://www.webqr.com/llqrcode.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
