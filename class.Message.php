@@ -12,17 +12,25 @@ class Message {
 		$this->conn = $conn;
 	}
 
-	public function get($id) {
+	public function get($id, $box = "in", $toid = "") {
+		if ($toid == "") {
+			$toid = $this->base->MEID;
+		}
 		# unencrypt the message
-		$content = file_get_contents($this->base->INBOX . "/" . $this->base->MEID . "-" . $id . ".secmail");
-		$ekeys = json_decode(substr($content, 0, strpos($content, ']') + 1), true);
-		$content = substr($content, strpos($content, ']') + 1);
+		$content = file_get_contents($this->base->BOX[$box] . "/" . $toid . "-" . $id . ".secmail");
 
-		$priv = openssl_get_privatekey(file_get_contents($this->base->PRIVATEKEY));
-		openssl_open($content, $message, base64_decode($ekeys[0]), $priv);
+		if ($box == "sent") {
+			$message = Crypto::decrypt(sha1(file_get_contents($this->base->PRIVATEKEY)), $content);
+		} else {
+			$ekeys = json_decode(substr($content, 0, strpos($content, ']') + 1), true);
+			$content = substr($content, strpos($content, ']') + 1);
 
-		if (empty($message)) {
-			throw new Exception("Unable to read message " . $id . ". This message might be fraud.\n" . openssl_error_string());
+			$priv = openssl_get_privatekey(file_get_contents($this->base->PRIVATEKEY));
+			openssl_open($content, $message, base64_decode($ekeys[0]), $priv);
+
+			if (empty($message)) {
+				throw new Exception("Unable to read message " . $id . ". This message might be fraud.\n" . openssl_error_string());
+			}
 		}
 
 		$messageParts = explode("\n\n", $message);
@@ -32,72 +40,89 @@ class Message {
 			$headers[$match] = $matches[2][$key];
 		}
 
-		return Array("header" => $headers, "body" => array_slice($messageParts, 1));
+		$fromid = array_shift(explode("@", $headers["From"]));
+		$headers["From"] = Array(
+			"full" => $headers["From"],
+			"id" => $fromid,
+			"name" => $this->base->ADDRESSBOOK[$fromid]["name"]
+		);
+		$headers["To"]['id'] = $toid;
+		$headers["To"]["name"] = $this->base->ADDRESSBOOK[$toid]["name"];
+
+		return Array("to" => $toid, "header" => $headers, "body" => array_slice($messageParts, 1));
 	}
 
-	public function fetch() {
-		$contacts = Array();
+	public function fetch($box = "in", $fetchFromServer = true) {
 		$messages = Array();
+		$inbox = Array();
 
-		$serv = explode(":", $this->base->SERVERS[$this->base->MESERVER]);
-		$mycreds = $serv[0].":".$serv[1];
+		if ($this->base->isSetup()) {
 
-		$result = $this->conn->download($serv[2], $mycreds);
-		preg_match_all('#href="(' . $this->base->MEID . '-[^"]+\\.secmail)"#m', $result, $matches);
+			if ($box == "in" && $fetchFromServer) {
+				$serv = explode(":", $this->base->SERVERS[$this->base->MESERVER]);
+				$mycreds = $serv[0].":".$serv[1];
 
-		foreach($matches[1] as $match) {
-			# get that file
-			$newmsg = $this->base->INBOX . "/" . $match;
-			$content = $this->conn->download($serv[2]. '/' . $match, $mycreds);
-			$this->conn->delete($serv[2] . '/' . $match, $mycreds);
-			file_put_contents($newmsg, $content);
+				$result = $this->conn->download($serv[2], $mycreds);
+				preg_match_all('#href="(' . $this->base->MEID . '-[^"]+\\.secmail)"#m', $result, $matches);
 
-			if (substr($content, 0, 26) == '-----BEGIN PUBLIC KEY-----') {
-				# we got a contact request
-				$pubkey = trim(substr($content, 0, strpos($content, "-----END PUBLIC KEY-----") + strlen("-----END PUBLIC KEY-----")));
-				$end = trim(substr($content, strpos($content, "-----END PUBLIC KEY-----") + strlen("-----END PUBLIC KEY-----")));
-				list($user, $server, $name,) = explode("\n", $end);
-				$end = substr($end, strpos($end, $server."\n".$name) + strlen($server."\n".$name) + 1);
-				$end = Crypto::decrypt(sha1(trim($pubkey)), $end);
+				foreach($matches[1] as $match) {
+					# get that file
+					$newmsg = $this->base->BOX["in"] . "/" . $match;
+					$content = $this->conn->download($serv[2]. '/' . $match, $mycreds);
+					$this->conn->delete($serv[2] . '/' . $match, $mycreds);
+					file_put_contents($newmsg, $content);
 
-				list($id, $serverName) = explode("@", $user);
-				if (!file_exists($this->base->KEYDIR . "/" . $id . ".public.pem")) {
-					$contacts[] = Array(
-						"id" => $id,
-						"serverName" => $serverName,
-						"user" => $user,
-						"name" => $name,
-						"server" => $server,
-						"content" => $content,
-						"message" => $end
-					);
-				}
-				unlink($newmsg);
-			} else {
-				$msgid = str_replace('.secmail', '', basename($newmsg));
-				$msgid = str_replace($this->base->MEID . "-", '', $msgid);
-				try {
-					$messages[$msgid] = $this->get($msgid);
-				} catch(Exception $e) {
-					unlink($newmsg);
-					throw $e;					
+					$msgid = str_replace('.secmail', '', basename($newmsg));
+					$msgid = str_replace($this->base->MEID . "-", '', $msgid);
+					try {
+						$msg = $this->get($msgid);
+						$messages[$msgid] = Array(
+							"to" => $this->base->MEID,
+							"file" => $newmsg,
+							"message" => $msg
+						);
+					} catch(Exception $e) {
+						unlink($newmsg);
+						throw $e;					
+					}
 				}
 			}
+
+			$dp = opendir($this->base->BOX[$box]);
+			while (($file = readdir($dp)) !== false) {
+				if ($file[0] != "." && strpos($file, ".secmail") !== false) {
+					$fileParts = explode("-", str_replace(".secmail", "", $file));
+					$toid = $fileParts[0];
+					$id = $fileParts[1];
+					$msg = $this->get($id, $box, $toid);
+					$inbox[$id] = Array(
+						"id" => $id,
+						"to" => $toid,
+						"file" => $file,
+						"message" => $msg
+					);
+				}
+			}
+			closedir($dp);
 		}
 
 		return Array(
-			"contactRequests" => $contacts,
-			"messages" => $messages
+			"new" => $messages,
+			"messages" => $inbox,
 		);
 	}
 
-	function send($to, $subject, $body, $headers) {
+	function send($to, $subject, $body, $headers = "") {
+		if (strpos($to, "@") === false) {
+			$to = $to . "@" . $this->base->ADDRESSBOOK[$to]["server"];
+		}
 		$toparts = explode("@", trim($to));
-		$toid = sha1($toparts[0]);
+		$toid = $toparts[0];
 		$tokey = "{$this->base->KEYDIR}/$toid.public.pem";
 		$server = $toparts[1];
 		$serv = explode(":", $this->base->SERVERS[$server]);
-		$TARGET = $serv[2]."/".$toid."-".uniqid("".time(), true).".secmail";
+		$targetFile = $toid."-".uniqid("".time(), true).".secmail";
+		$TARGET = $serv[2]."/".$targetFile;
 
 		$message = "From: {$this->base->ME}\n" . 
 				   "Date: " . date("Y-m-d H:i:s") . "\n" . 
@@ -124,6 +149,7 @@ class Message {
 
 		file_put_contents($TMPFILE, json_encode($ekeys) . $cryptmessage);
 		$this->conn->upload($TMPFILE, $TARGET, $creds);
+		file_put_contents(__DIR__ . "/sent/" . $targetFile, Crypto::encrypt(sha1(file_get_contents($this->base->PRIVATEKEY)), $message));
 		unlink($TMPFILE);
 	}
 }

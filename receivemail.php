@@ -16,7 +16,7 @@ foreach ($list["contactRequests"] as $request) {
 	$base->handleContactRequest($request);
 }
 
-$base->renderMessages($list["messages"]);
+$base->renderMessages(array_merge($list["new"], $list["messages"]));
 
 if (!empty($showMsg)) {
 	$msg = $message->get($showMsg);

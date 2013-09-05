@@ -21,17 +21,8 @@ class JSONInit extends AbstractInit {
 		}
 	}
 
-	function handleContactRequest($request) {
-		echo json_encode($request);
-	}
-
 	function renderServerList() {
 		echo json_encode(array_keys($this->SERVERS));
-	}
-
-	function renderContactRequest($to, $body) {
-		echo '{"error": "unknown user", "to": ' . json_encode($to) . ', "body": ' . json_encode($body) . '}';
-		die();
 	}
 
 	function renderProfile() {
@@ -39,7 +30,7 @@ class JSONInit extends AbstractInit {
 			 $this->MESERVER . "=" . $this->SERVERS[$this->MESERVER] . "\n" . 
 			 $this->ADDRESSBOOK[$this->MEID]["name"];
 
-		$contact = gzcompress($contact);
+		$contact = base64_encode(gzdeflate($contact, 9));
 		echo '{"me": ' . json_encode($contact) . '}';
 	}
 
@@ -53,7 +44,7 @@ class JSONInit extends AbstractInit {
 				}
 				$message = Array(
 					"id" => $id,
-					"from" => $this->ADDRESSBOOK[array_shift(explode("@", $msg["message"]["header"]["From"]))]["name"],
+					"from" => $msg["message"]["header"]["From"]["name"],
 					"to" => $this->ADDRESSBOOK[$msg["to"]]["name"],
 					"message" => $msg
 				);

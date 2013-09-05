@@ -1,4 +1,6 @@
 <?php
+error_reporting(E_ERROR | E_WARNING | E_PARSE);
+
 include_once("../class.WebDAVServer.php");
 include_once("../class.JSONInit.php");
 include_once("../class.Message.php");
@@ -32,9 +34,29 @@ if (isset($_GET['addressbook'])) {
 	die();
 }
 
+if (isset($_GET["getContact"])) {
+	$contact = $json->extractContact($_POST["contact"]);
+	die('{"name": ' . json_encode($contact["name"]) . '}');
+}
+
+if (isset($_GET["delete"])) {
+	$dp = opendir($json->BOX[$_GET["mb"]]);
+	while (($file = readdir($dp)) !== false) {
+		if ($file[0] != ".") {
+			list($toid, $msgid) = explode("-", str_replace(".secmail", "", $file));
+			if ($msgid == $_GET["msgid"]) {
+				unlink($json->BOX[$_GET["mb"]] . "/" . $file);
+			}
+		}
+	}
+	closedir($dp);
+}
+
 if (isset($_GET["send"])) {
 	try {
-		$message->send($_POST["to"], $_POST["subject"], $_POST["body"]);
+		foreach ($_POST['send']['to'] as $to) {
+			$message->send($to, $_POST['send']["subject"], $_POST['send']["body"]);
+		}
 		die('{"success": true}');
 	} catch(Exception $e) {
 		die('{"error": ' . json_encode($e->getMessage()) . '}');
@@ -45,14 +67,14 @@ if (isset($_GET["send"])) {
 	"name": "Inbox",
 	"id": "in",
 	"messages": <?php
-		$list = $message->fetch("in");
+		$list = $message->fetch("in", isset($_GET["fetch"]));
 		$json->renderMessages(array_merge($list["new"], $list["messages"]));
 	?>
 }, {
 	"name": "Sent Items",
 	"id": "sent",
 	"messages": <?php
-		$list = $message->fetch("sent");
+		$list = $message->fetch("sent", isset($_GET["fetch"]));
 		$json->renderMessages($list["messages"]);
 	?>
 }]

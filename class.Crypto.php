@@ -26,7 +26,7 @@ class Crypto {
 	    $key = substr($result, 0, 32);
 	    $iv  = substr($result, 32,16);
 
-	    $result = openssl_decrypt($ct, 'aes-256-cbc', $key, true, $iv);
+	    $result = @openssl_decrypt($ct, 'aes-256-cbc', $key, true, $iv);
 	    return $result;
 	}
 
