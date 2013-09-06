@@ -115,16 +115,16 @@ var CameraScanner = (function(){
 		cancel: function cancel() {
 		    if (webkit) {
 		    	camstream && camstream.stop();
-		    	v.src = null;
+		    	v && (v.src = null);
 		    } else if (moz) {
-		        v.mozSrcObject = null;
-		        v.stop();
+		        v && (v.mozSrcObject = null);
+		        v && (v.stop());
 		    } else {
 		    	camstream && camstream.stop();
-		        v.src = null;
+		        v && (v.src = null);
 		    }
 
-			$(targetSelector).html("");
+			targetSelector && $(targetSelector).html("");
 			stype = 2;
 		}
 	};

@@ -28,7 +28,7 @@ class JSONInit extends AbstractInit {
 	function renderProfile() {
 		$contact = file_get_contents($this->PUBLICKEY) . 
 			 $this->MESERVER . "=" . $this->SERVERS[$this->MESERVER] . "\n" . 
-			 $this->ADDRESSBOOK[$this->MEID]["name"];
+			 $this->ADDRESSBOOK[$this->MEID]["name"] . "\n" . $this->MEID;
 
 		$contact = base64_encode(gzdeflate($contact, 9));
 		echo '{"me": ' . json_encode($contact) . '}';
@@ -71,10 +71,10 @@ class JSONInit extends AbstractInit {
 	}
 
 	function setInitData($data) {
-		$this->MEID = sha1($data['uname']);
+		$this->MEID = sha1($data["uname"] . uniqid() . microtime(true));
 		$this->createKeypair();
-		$uid = $this->addAddress($data['uname'], "");
-		$this->setPrimaryServer($data['server'], sha1($data['uname']), Array(
+		$uid = $this->addAddress($this->MEID, $data['uname'], "");
+		$this->setPrimaryServer($data['server'], $this->MEID, Array(
 			"user" => $data["user"],
 			"pass" => $data["pass"],
 			"host" => $data["host"],

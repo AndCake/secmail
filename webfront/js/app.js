@@ -53,6 +53,8 @@
 
   var deleteMsg = function(msgData) {
     $.getJSON("data.php?delete&mb=" + msgData[0] + "&msgid=" + msgData[1], function(data){
+      mailboxes = data;
+      renderMailboxes(data, true);
       renderMails(data[msgData[0]].messages, msgData[0]);
     });
   }
@@ -86,7 +88,7 @@
         $.post("data.php?getContact", {contact: a}, function(data) {
           data = JSON.parse(data);
           $("#btn-connect")[0].disabled = false;
-          renderTpl("#result", 'renderContact', {line: data.name, data: a}, true);
+          renderTpl("#result", 'renderContact', {line: data.name, data: a}, $("#result .new-contact").length > 0);
           CameraScanner.cancel();
           $("#qrfile").show();
           $(".import .x-tabs li a.active").removeClass("active");
@@ -153,7 +155,7 @@
         e.preventDefault();
       }, false)
       $("#qrfile")[0].addEventListener("drop", handleFiles, false);
-      $("#main .mails form.import").submit(function(event){
+      $("#main .contact form.import").submit(function(event){
         event.preventDefault();
         $.post(this.action, $(this).serialize(), function(data){
           data = JSON.parse(data);
@@ -267,7 +269,10 @@ var routes = [{
   if (location.hash.length <= 0) {
     location.hash = "#/";
   } else {
-    indexPage(doRoute);
+    indexPage(function() {
+      doRoute();
+      indexPage(null, true);
+    });
   }
 
   setTimeout(function() {

@@ -68,13 +68,13 @@ if (isset($_GET["send"])) {
 	"id": "in",
 	"messages": <?php
 		$list = $message->fetch("in", isset($_GET["fetch"]));
-		$json->renderMessages(array_merge($list["new"], $list["messages"]));
+		$json->renderMessages($list["messages"]);
 	?>
 }, {
 	"name": "Sent Items",
 	"id": "sent",
 	"messages": <?php
-		$list = $message->fetch("sent", isset($_GET["fetch"]));
+		$list = $message->fetch("sent");
 		$json->renderMessages($list["messages"]);
 	?>
 }]

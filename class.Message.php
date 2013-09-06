@@ -62,28 +62,28 @@ class Message {
 				$serv = explode(":", $this->base->SERVERS[$this->base->MESERVER]);
 				$mycreds = $serv[0].":".$serv[1];
 
-				$result = $this->conn->download($serv[2], $mycreds);
-				preg_match_all('#href="(' . $this->base->MEID . '-[^"]+\\.secmail)"#m', $result, $matches);
+				$list = $this->conn->getList($serv[2] . "/", $mycreds);
+				foreach ($list as $name) {
+					if (strpos($name, $this->base->MEID . "-") >= 0 && array_pop(explode(".", $name)) == "secmail") {
+						# get that file
+						$newmsg = $this->base->BOX["in"] . "/" . $match;
+						$content = $this->conn->download($serv[2]. '/' . $match, $mycreds);
+						$this->conn->delete($serv[2] . '/' . $match, $mycreds);
+						file_put_contents($newmsg, $content);
 
-				foreach($matches[1] as $match) {
-					# get that file
-					$newmsg = $this->base->BOX["in"] . "/" . $match;
-					$content = $this->conn->download($serv[2]. '/' . $match, $mycreds);
-					$this->conn->delete($serv[2] . '/' . $match, $mycreds);
-					file_put_contents($newmsg, $content);
-
-					$msgid = str_replace('.secmail', '', basename($newmsg));
-					$msgid = str_replace($this->base->MEID . "-", '', $msgid);
-					try {
-						$msg = $this->get($msgid);
-						$messages[$msgid] = Array(
-							"to" => $this->base->MEID,
-							"file" => $newmsg,
-							"message" => $msg
-						);
-					} catch(Exception $e) {
-						unlink($newmsg);
-						throw $e;					
+						$msgid = str_replace('.secmail', '', basename($newmsg));
+						$msgid = str_replace($this->base->MEID . "-", '', $msgid);
+						try {
+							$msg = $this->get($msgid);
+							$messages[$msgid] = Array(
+								"to" => $this->base->MEID,
+								"file" => $newmsg,
+								"message" => $msg
+							);
+						} catch(Exception $e) {
+							unlink($newmsg);
+							throw $e;					
+						}
 					}
 				}
 			}

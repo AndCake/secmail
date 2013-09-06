@@ -107,12 +107,11 @@ class AbstractInit {
 		return file_exists($this->KEYDIR) && file_exists("{$this->KEYDIR}/id");
 	}
 
-	protected function addAddress($name, $fingerprint = "", $server = null, $publicKey = null) {
+	protected function addAddress($id, $name, $fingerprint = "", $server = null, $publicKey = null) {
 		$serverFileName = __DIR__ . '/servers';
 		$serversFile = file_get_contents($serverFileName);
 		$name = trim($name);
 		$fingerprint = trim($fingerprint);
-		$id = sha1($name);
 		$serv = "";
 
 		if (!empty($publicKey)) {
@@ -135,7 +134,7 @@ class AbstractInit {
 
 	public function addPureContact($content) {
 		$contact = $this->extractContact($content);
-		$this->addAddress($contact["name"], "", $contact["server"], $contact["publickey"]);
+		$this->addAddress($contact["id"], $contact["name"], "", $contact["server"], $contact["publickey"]);
 	}
 
 	public function extractContact($contact) {
@@ -146,12 +145,13 @@ class AbstractInit {
 		$pk = substr($content, 0, strpos($content, "-----END PUBLIC KEY-----") + strlen("-----END PUBLIC KEY-----"));
 		$end = substr($content, strpos($content, "-----END PUBLIC KEY-----") + strlen("-----END PUBLIC KEY-----") + 1);
 
-		list($server, $user) = explode("\n", $end);
+		list($server, $user, $id) = explode("\n", $end);
 		if (empty($server) || empty($user)) {
 			throw new Exception("Unable to read contact information: user extraction.");
 		}
 
 		return Array(
+			"id" => $id,
 			"name" => $user,
 			"server" => $server,
 			"publickey" => $pk
