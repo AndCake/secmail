@@ -62,7 +62,11 @@ class AbstractInit {
 	protected function createKeypair($addAddress = true) {
 		if (!file_exists($this->PRIVATEKEY)) {
 			# Create the keypair
-			$res = openssl_pkey_new();
+			$res = openssl_pkey_new(Array(
+				"digest_alg" => "sha512",
+				"private_key_bits" => 4096,
+				"private_key_type" => OPENSSL_KEYTYPE_RSA,
+			));
 			# Get private key
 			openssl_pkey_export($res, $priv);
 			file_put_contents($this->PRIVATEKEY, $priv);

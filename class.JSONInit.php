@@ -31,7 +31,7 @@ class JSONInit extends AbstractInit {
 			 $this->ADDRESSBOOK[$this->MEID]["name"] . "\n" . $this->MEID;
 
 		$contact = base64_encode(gzdeflate($contact, 9));
-		echo '{"me": ' . json_encode($contact) . '}';
+		echo '{"me": ' . json_encode($contact) . ', "name": ' . json_encode($this->ADDRESSBOOK[$this->MEID]["name"]) . '}';
 	}
 
 	function renderMessages($messages) {

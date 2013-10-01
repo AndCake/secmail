@@ -31,7 +31,7 @@
       <h2>Setup</h2>
       <form method="post" action="data.php?setup">
         <p>This is the first time you use SecMail. </p>
-        <input type="text" name="setup[uname]" placeholder="Please enter your username" required="required"/>
+        <input type="text" name="setup[uname]" placeholder="Please enter your name" required="required"/>
         <select name="setup[server]" size="1" required="required">
           <option value="" selected="selected" disabled="disabled">Select primary server</option>
           <% _.each(servers, function(server, idx) {%><option value=<%=idx+1%>><%=server%></option><% }); %>
@@ -66,7 +66,7 @@
       </p>
       <div class="my-contact">
         <label>Your Profile Code:</label>
-        <span class="title">RedLine profile code</span>
+        <span class="title">RedLine profile code <%=name%></span>
         <img src="https://chart.googleapis.com/chart?chs=250x250&cht=qr&chl=<%=encodeURIComponent(data)%>"/>
         <a href="#/print">Print</a>
       </div>

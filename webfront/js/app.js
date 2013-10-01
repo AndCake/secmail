@@ -83,7 +83,7 @@
 
   var addContact = function() {
     $.getJSON("data.php?me", function(data){
-      renderTpl("#main", 'add-contact', {data: data.me});
+      renderTpl("#main", 'add-contact', {data: data.me, name: data.name});
       qrcode.callback = function(a) {
         $.post("data.php?getContact", {contact: a}, function(data) {
           data = JSON.parse(data);

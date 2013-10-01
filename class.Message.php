@@ -6,6 +6,7 @@ class Message {
 
 	private $base;
 	private $conn;
+	public $ignoreUnknownSenders = false;
 
 	function __construct($base, $conn) {
 		$this->base = $base;
@@ -46,6 +47,9 @@ class Message {
 			"id" => $fromid,
 			"name" => $this->base->ADDRESSBOOK[$fromid]["name"]
 		);
+		if ($this->ignoreUnknownSenders && $box != "sent" && (empty($this->base->ADDRESSBOOK[$fromid]["name"]) || !file_exists($this->base->KEYDIR . "/" . $fromid . ".public.pem"))) {
+			throw new Exception("Sender not in addressbook. Ignoring message.");
+		}
 		$headers["To"]['id'] = $toid;
 		$headers["To"]["name"] = $this->base->ADDRESSBOOK[$toid]["name"];
 
